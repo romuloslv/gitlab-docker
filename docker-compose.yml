@@ -1,0 +1,80 @@
+version: "3.7"
+
+networks:
+  lab:
+    driver: bridge
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+
+services:
+  watcher:
+    image: v2tec/watchtower:latest
+    container_name: watcher
+    command: --cleanup --schedule "0 0 0 * * *"
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      resources:
+        limits:
+          memory: "128M"
+        reservations:
+          memory: "64M"
+
+  mail:
+    image: bytemark/smtp
+    container_name: mail
+    restart: always
+    environment:
+      RELAY_HOST: "${GITLAB_SMTP}"
+      RELAY_PORT: "${GITLAB_PORT}"
+      RELAY_USERNAME: "${GITLAB_USER}"
+      RELAY_PASSWORD: "${GITLAB_PASS}"
+    deploy:
+      resources:
+        limits:
+          memory: "128M"
+        reservations:
+          memory: "64M"
+    networks:
+      - lab
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: always
+    hostname: gitlab
+    ports:
+      - "2222:22"
+      - "80:80"
+      - "443:443"
+    networks:
+      - lab
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url "http://${GITLAB_DOMAIN}"
+        letsencrypt['enable'] = false
+        gitlab_rails['gitlab_email_enabled'] = true
+        gitlab_rails['gitlab_email_from'] = "${GITLAB_USER}"
+        gitlab_rails['gitlab_email_display_name'] = 'GitLab'
+        #gitlab_rails['gitlab_email_reply_to'] = "${GITLAB_USER}"
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = "mail"
+        gitlab_rails['smtp_port'] = 25
+        gitlab_rails['smtp_tls'] = false
+        gitlab_rails['backup_keep_time'] = 604800
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: 4G
+        reservations:
+          cpus: "2"
+          memory: 2G
