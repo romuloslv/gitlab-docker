@@ -8,6 +8,7 @@ volumes:
   gitlab-config:
   gitlab-logs:
   gitlab-data:
+  runner1-config:
 
 services:
   watcher:
@@ -23,6 +24,8 @@ services:
           memory: "128M"
         reservations:
           memory: "64M"
+    networks:
+      - lab
 
   mail:
     image: bytemark/smtp
@@ -51,8 +54,6 @@ services:
       - "2222:22"
       - "80:80"
       - "443:443"
-    networks:
-      - lab
     volumes:
       - gitlab-config:/etc/gitlab
       - gitlab-logs:/var/log/gitlab
@@ -70,6 +71,7 @@ services:
         gitlab_rails['smtp_port'] = 25
         gitlab_rails['smtp_tls'] = false
         gitlab_rails['backup_keep_time'] = 604800
+        registry['enable'] = true
     deploy:
       resources:
         limits:
@@ -78,3 +80,22 @@ services:
         reservations:
           cpus: "2"
           memory: 2G
+    networks:
+      - lab
+
+  runner1:
+    image: gitlab/gitlab-runner:latest
+    container_name: runner1
+    restart: always
+    hostname: runner1
+    volumes:
+      - runner1-config:/etc/gitlab-runner:Z
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    networks:
+      - lab
