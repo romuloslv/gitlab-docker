@@ -1,101 +1,97 @@
-version: "3.7"
+version: '3.9'
 
 networks:
   lab:
-    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: '10.0.0.0/24'
 
 volumes:
   gitlab-config:
   gitlab-logs:
   gitlab-data:
-  runner1-config:
+
+configs:
+  gitlab:
+    file: ./confs/gitlab.rb
+
+secrets:
+  gitlab_root_password:
+    file: ./confs/root_password.txt
 
 services:
-  watcher:
-    image: v2tec/watchtower:latest
-    container_name: watcher
-    command: --cleanup --schedule "0 0 0 * * *"
-    restart: always
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    hostname: watchtower
+    domainname: quiver.net.br
+    restart: on-failure:3
+    command: --cleanup --schedule "0 0 * * * *" --debug watchtower gitlab
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:rw
     deploy:
       resources:
         limits:
-          memory: "128M"
+          memory: '128M'
         reservations:
-          memory: "64M"
+          memory: '64M'
     networks:
-      - lab
-
-  mail:
-    image: bytemark/smtp
-    container_name: mail
-    restart: always
-    environment:
-      RELAY_HOST: "${GITLAB_SMTP}"
-      RELAY_PORT: "${GITLAB_PORT}"
-      RELAY_USERNAME: "${GITLAB_USER}"
-      RELAY_PASSWORD: "${GITLAB_PASS}"
-    deploy:
-      resources:
-        limits:
-          memory: "128M"
-        reservations:
-          memory: "64M"
-    networks:
-      - lab
+      lab:
+        ipv4_address: '10.0.0.10'
 
   gitlab:
-    image: gitlab/gitlab-ce:latest
+    image: gitlab/gitlab-ce
     container_name: gitlab
-    restart: always
     hostname: gitlab
+    domainname: quiver.net.br
+    restart: always
     ports:
-      - "2222:22"
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
+      - '22:22'
     volumes:
+      - /etc/localtime:/etc/localtime:rw
       - gitlab-config:/etc/gitlab
       - gitlab-logs:/var/log/gitlab
       - gitlab-data:/var/opt/gitlab
-    environment:
-      GITLAB_OMNIBUS_CONFIG: |
-        external_url "http://${GITLAB_DOMAIN}"
-        letsencrypt['enable'] = false
-        gitlab_rails['gitlab_email_enabled'] = true
-        gitlab_rails['gitlab_email_from'] = "${GITLAB_USER}"
-        gitlab_rails['gitlab_email_display_name'] = 'GitLab'
-        #gitlab_rails['gitlab_email_reply_to'] = "${GITLAB_USER}"
-        gitlab_rails['smtp_enable'] = true
-        gitlab_rails['smtp_address'] = "mail"
-        gitlab_rails['smtp_port'] = 25
-        gitlab_rails['smtp_tls'] = false
-        gitlab_rails['backup_keep_time'] = 604800
-        registry['enable'] = true
     deploy:
       resources:
         limits:
-          cpus: "8"
+          cpus: '4'
           memory: 4G
         reservations:
-          cpus: "2"
+          cpus: '2'
           memory: 2G
+    #shm_size: '2gb'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"
+    configs:
+      - source: gitlab
+        target: /omnibus_config.rb
+    secrets:
+      - gitlab_root_password
     networks:
-      - lab
+      lab:
+        ipv4_address: '10.0.0.20'
 
-  runner1:
-    image: gitlab/gitlab-runner:latest
-    container_name: runner1
+  runner:
+    image: gitlab/gitlab-runner:alpine
+    container_name: runner
     restart: always
-    hostname: runner1
+    hostname: runner
     volumes:
-      - runner1-config:/etc/gitlab-runner:Z
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - runner-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
     deploy:
+      mode: replicated
+      replicas: 4
       resources:
         limits:
           memory: 2G
         reservations:
           memory: 1G
     networks:
-      - lab
+      lab:
+        ipv4_address: '10.0.0.30'
