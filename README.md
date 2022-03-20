@@ -6,3 +6,4 @@ support for:
 * Runner (via [GitLab's gitlab-runner
   image](https://hub.docker.com/r/gitlab/gitlab-runner))
 * Automatic updates
+* LDAP integration
