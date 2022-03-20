@@ -29,8 +29,12 @@ services:
     restart: on-failure:3
     command: --cleanup --schedule "0 0 * * * *" --debug watchtower gitlab
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/localtime:/etc/localtime:rw
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
     deploy:
       resources:
         limits:
@@ -50,17 +54,24 @@ services:
     ports:
       - '80:80'
       - '443:443'
-      - '22:22'
     volumes:
-      - /etc/localtime:/etc/localtime:rw
-      - gitlab-config:/etc/gitlab
-      - gitlab-logs:/var/log/gitlab
-      - gitlab-data:/var/opt/gitlab
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+      - type: volume
+        source: gitlab-config
+        target: /etc/gitlab
+      - type: volume
+        source: gitlab-logs
+        target: /var/log/gitlab
+      - type: volume
+        source: gitlab-data
+        target: /var/opt/gitlab
     deploy:
       resources:
         limits:
           cpus: '4'
-          memory: 4G
+          memory: 6G
         reservations:
           cpus: '2'
           memory: 2G
