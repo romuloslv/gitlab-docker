@@ -51,9 +51,6 @@ services:
     hostname: gitlab
     domainname: quiver.net.br
     restart: always
-    ports:
-      - '80:80'
-      - '443:443'
     volumes:
       - type: bind
         source: /etc/localtime
@@ -82,6 +79,9 @@ services:
         target: /omnibus_config.rb
     secrets:
       - gitlab_root_password
+    ports:
+      - '80:80'
+      - '443:443'
     networks:
       lab:
         ipv4_address: '10.0.0.20'
