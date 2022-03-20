@@ -2,10 +2,12 @@ version: '3.9'
 
 networks:
   lab:
+    driver: bridge
     ipam:
       driver: default
       config:
         - subnet: '10.0.0.0/24'
+          gateway: '10.0.0.100'
 
 volumes:
   gitlab-config:
