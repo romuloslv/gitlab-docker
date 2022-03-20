@@ -64,7 +64,6 @@ services:
         reservations:
           cpus: '2'
           memory: 2G
-    #shm_size: '2gb'
     environment:
       GITLAB_OMNIBUS_CONFIG: "from_file('/omnibus_config.rb')"
     configs:
