@@ -30,7 +30,7 @@ services:
     hostname: watchtower
     domainname: quiver.net.br
     restart: on-failure:3
-    command: --cleanup --schedule "0 0 * * * *" --debug watchtower gitlab
+    command: --cleanup --no-pull --debug watchtower gitlab
     volumes:
       - type: bind
         source: /var/run/docker.sock
